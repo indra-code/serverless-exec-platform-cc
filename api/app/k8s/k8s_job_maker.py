@@ -8,7 +8,7 @@ core_v1 = client.CoreV1Api()
 
 def create_k8s_job(job_id: str, code_path: str):
     container_name = f"runner-{job_id}"
-    job_name = f"job-{job_id}"
+    job_name = f"job-{job_id[:8]}"
     volume_name = "code-volume"
     mount_path = "/app/code"
 
