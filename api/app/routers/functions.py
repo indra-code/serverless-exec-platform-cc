@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 import logging
 import traceback
+import time
 from ..database.database import get_db
 from ..models.function import Function
-from ..schemas.function import FunctionCreate, FunctionUpdate, FunctionInDB
-from ..k8s.job_queue import add_to_queue
+from ..schemas.function import FunctionCreate, FunctionUpdate, FunctionInDB, FunctionExecutionRequest
+from ..metrics.collector import MetricsCollector
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -96,15 +97,78 @@ def update_function(function_id: int, function: FunctionUpdate, db: Session = De
         )
 
 @router.post("/{function_id}/execute", status_code=status.HTTP_200_OK)
-def execute_function(function_id: int, db: Session = Depends(get_db)):
-    function = db.query(Function).filter(Function.id == function_id).first()
-    if function is None:
-        raise HTTPException(status_code=404, detail="Function not found")
-    else:
-        add_to_queue(function_id, function.code_path)
-        return {"message": "Function execution requested"}
-    
-    
+async def execute_function(
+    function_id: int,
+    request: FunctionExecutionRequest,
+    runtime: Optional[str] = "docker",
+    db: Session = Depends(get_db),
+    fastapi_request: Request = None
+):
+    try:
+        function = db.query(Function).filter(Function.id == function_id).first()
+        if function is None:
+            raise HTTPException(status_code=404, detail="Function not found")
+        
+        # Initialize metrics collector
+        metrics_collector = MetricsCollector(db)
+        start_time = time.time()
+        
+        try:
+            # Select execution engine based on runtime
+            if runtime == "docker":
+                engine = fastapi_request.state.docker_engine
+            elif runtime == "gvisor" and fastapi_request.state.gvisor_engine:
+                engine = fastapi_request.state.gvisor_engine
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Runtime '{runtime}' not available. Available runtimes: docker" + 
+                          (", gvisor" if fastapi_request.state.gvisor_engine else "")
+                )
+            
+            # Execute the function
+            result = await engine.execute_function(function, request)
+            end_time = time.time()
+            
+            # Collect metrics
+            await metrics_collector.collect_execution_metrics(
+                function=function,
+                request=request,
+                start_time=start_time,
+                end_time=end_time,
+                success=result["status"] == "success",
+                error=result.get("error"),
+                resource_usage={
+                    "memory_used": function.memory,
+                    "execution_time": end_time - start_time
+                }
+            )
+            
+            if result["status"] == "error":
+                raise HTTPException(status_code=500, detail=result["error"])
+            
+            return result
+            
+        except Exception as e:
+            end_time = time.time()
+            await metrics_collector.collect_execution_metrics(
+                function=function,
+                request=request,
+                start_time=start_time,
+                end_time=end_time,
+                success=False,
+                error=str(e)
+            )
+            raise e
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing function: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error executing function: {str(e)}"
+        )
 
 @router.delete("/{function_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_function(function_id: int, db: Session = Depends(get_db)):
