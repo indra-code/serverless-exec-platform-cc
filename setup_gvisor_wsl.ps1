@@ -1,20 +1,6 @@
 # PowerShell script to set up gVisor in WSL
 Write-Host "Setting up gVisor in WSL..."
 
-# Check if WSL is installed
-$wslInstalled = Get-Command wsl -ErrorAction SilentlyContinue
-if (-not $wslInstalled) {
-    Write-Error "WSL is not installed. Please install WSL first."
-    exit 1
-}
-
-# Check if WSL 2 is the default version
-$wslVersion = wsl --version
-if (-not $wslVersion.Contains("WSL 2")) {
-    Write-Error "WSL 2 is not the default version. Please set WSL 2 as the default version."
-    exit 1
-}
-
 # Install gVisor
 Write-Host "Installing gVisor..."
 try {
@@ -23,19 +9,30 @@ try {
     wsl -e bash -c "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main' | sudo tee /etc/apt/sources.list.d/gvisor.list"
     wsl -e bash -c "sudo apt-get update && sudo apt-get install -y runsc"
     
+    # Install Docker if not already installed
+    wsl -e bash -c "sudo apt-get update && sudo apt-get install -y docker.io"
+    
+    # Add user to docker group
+    wsl -e bash -c "sudo usermod -aG docker $USER"
+    
     # Configure Docker to use gVisor
     wsl -e bash -c "sudo mkdir -p /etc/docker"
-    wsl -e bash -c "echo '{\"runtimes\": {\"runsc\": {\"path\": \"/usr/local/bin/runsc\"}}}' | sudo tee /etc/docker/daemon.json"
-    wsl -e bash -c "sudo systemctl restart docker"
+    wsl -e bash -c "echo '{\"runtimes\":{\"runsc\":{\"path\":\"/usr/bin/runsc\",\"runtimeArgs\":[]}}}' | sudo tee /etc/docker/daemon.json"
+    
+    # Start Docker service
+    wsl -e bash -c "sudo service docker start"
     
     # Verify gVisor installation
-    $gvisorVersion = wsl -e bash -c "/usr/local/bin/runsc --version"
+    $gvisorVersion = wsl -e bash -c "runsc --version"
     if (-not $gvisorVersion) {
         Write-Error "Failed to verify gVisor installation."
         exit 1
     }
     
     Write-Host "gVisor installed successfully: $gvisorVersion"
+    
+    # Wait for Docker to be ready
+    Start-Sleep -Seconds 5
     
     # Test gVisor with a simple container
     Write-Host "Testing gVisor with a simple container..."

@@ -1,0 +1,7 @@
+Job submitted to queue: ae8124d1-f3c5-46e9-94eb-df5fc58141eb
+Original code path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_473a3dc4-2245-4e91-8290-ca06ff5d57b1.py
+K8s code path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+Runtime: python
+Timestamp: 20250421_231712
+--------------------------------------------
+Job has been queued for execution. Check worker logs for execution results.

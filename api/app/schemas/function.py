@@ -10,6 +10,7 @@ class FunctionBase(BaseModel):
     timeout: Optional[int] = 30
     memory: Optional[int] = 128
     is_active: Optional[bool] = True
+    worker_pod: Optional[str] = None
 
 class FunctionCreate(FunctionBase):
     pass
@@ -17,6 +18,7 @@ class FunctionCreate(FunctionBase):
 class FunctionUpdate(FunctionBase):
     name: Optional[str] = None
     code_path: Optional[str] = None
+    worker_pod: Optional[str] = None
 
 class FunctionInDB(FunctionBase):
     id: int

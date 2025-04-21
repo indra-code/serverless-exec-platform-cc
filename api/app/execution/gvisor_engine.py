@@ -8,60 +8,62 @@ import time
 from typing import Dict, Any, Optional
 from ..models.function import Function
 from ..schemas.function import FunctionExecutionRequest
-from ..metrics.collector import MetricsCollector
+import docker
 
 logger = logging.getLogger(__name__)
 
 class GVisorEngine:
     def __init__(self, is_wsl: bool = False):
-        self.is_wsl = is_wsl
-        if is_wsl:
-            self.runsc_path = "/usr/local/bin/runsc"  # Path in WSL
-            self.docker_socket = "unix:///var/run/docker.sock"
-        else:
-            self.runsc_path = "/usr/bin/runsc"  # Path in Linux
-            self.docker_socket = "unix:///var/run/docker.sock"
+        self.is_wsl = False  # Always use native Linux mode
+        # We'll use subprocess for Docker operations instead of docker-py
+        self.container_pool = {}
+        self.function_metadata = {}  # Store function metadata
         
         # Verify runsc is available
-        if not os.path.exists(self.runsc_path):
-            raise RuntimeError(f"runsc not found at {self.runsc_path}")
-        
-        # Configure Docker to use gVisor if not already configured
-        self._configure_docker()
+        try:
+            # Native Linux mode
+            result = subprocess.run(['which', 'runsc'], 
+                                 capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError("runsc not found on native Linux")
+            
+            # Configure Docker to use gVisor
+            self._configure_docker()
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize gVisor: {str(e)}")
+            raise
 
     def _configure_docker(self):
         """Configure Docker to use gVisor runtime"""
-        docker_config_path = "/etc/docker/daemon.json"
-        config = {
-            "runtimes": {
-                "runsc": {
-                    "path": self.runsc_path
-                }
-            }
-        }
-
         try:
-            # Read existing config if it exists
-            if os.path.exists(docker_config_path):
-                with open(docker_config_path, 'r') as f:
-                    existing_config = json.load(f)
-                    if "runtimes" in existing_config:
-                        existing_config["runtimes"].update(config["runtimes"])
-                        config = existing_config
-
-            # Write config
-            with open(docker_config_path, 'w') as f:
-                json.dump(config, f, indent=2)
-
-            # Restart Docker service
-            if self.is_wsl:
-                subprocess.run(["wsl", "-e", "sudo", "systemctl", "restart", "docker"], check=True)
-            else:
-                subprocess.run(["sudo", "systemctl", "restart", "docker"], check=True)
-
+            # Check if Docker is configured for gVisor
+            result = subprocess.run(['docker', 'info'], 
+                                 capture_output=True, text=True)
+            if 'runsc' not in result.stdout:
+                raise RuntimeError("Docker is not configured for gVisor on Linux. Please run the setup_gvisor_arch.sh script.")
+            
+            logger.info("Docker is correctly configured for gVisor on Linux")
+            
         except Exception as e:
-            logger.error(f"Failed to configure Docker: {str(e)}")
+            logger.error(f"Failed to configure Docker for gVisor: {str(e)}")
             raise
+
+    def register_function(self, function: Function):
+        """Register function metadata for later use"""
+        function_id = str(function.id)
+        self.function_metadata[function_id] = {
+            "id": function_id,
+            "name": function.name,
+            "description": function.description,
+            "code_path": function.code_path,
+            "runtime": function.runtime,
+            "timeout": function.timeout,
+            "memory": function.memory,
+            "is_active": function.is_active
+        }
+        logger.info(f"Function {function.name} (ID: {function_id}) registered with gVisor engine")
+        return self.function_metadata[function_id]
 
     def execute_function(self, function_id: str, code: str, runtime: str) -> dict:
         """Execute a function using gVisor"""
@@ -73,24 +75,10 @@ class GVisorEngine:
                 with open(code_path, "w") as f:
                     f.write(code)
 
-                # Build and run the container
-                docker_cmd = [
-                    "docker", "run", "--rm",
-                    "--runtime=runsc",
-                    "-v", f"{temp_dir}:/app",
-                    f"python:3.9-slim",
-                    "python", "/app/function.py"
-                ]
-
-                if self.is_wsl:
-                    # Convert Windows path to WSL path if needed
-                    temp_dir = subprocess.check_output(
-                        ["wsl", "wslpath", "-a", temp_dir]
-                    ).decode().strip()
-                    docker_cmd[4] = f"{temp_dir}:/app"
-
+                # Native Linux mode
+                # Execute the container directly using subprocess to avoid credential issues
                 result = subprocess.run(
-                    docker_cmd,
+                    ['docker', 'run', '--runtime=runsc', '--rm', '-v', f'{temp_dir}:/app', f'python:3.9-{runtime}', 'python', '/app/function.py'],
                     capture_output=True,
                     text=True
                 )
@@ -108,29 +96,6 @@ class GVisorEngine:
     def cleanup(self):
         """Clean up any resources"""
         pass  # No cleanup needed as we use temporary directories
-
-    def ensure_gvisor_installed(self):
-        try:
-            # Check if we're in WSL
-            if not os.path.exists("/proc/sys/fs/binfmt_misc/WSLInterop"):
-                raise RuntimeError("gVisor requires WSL 2. Please ensure you're running in WSL 2.")
-            
-            # Check if gVisor is installed
-            result = subprocess.run(["wsl", "-e", "bash", "-c", f"{self.runsc_path} --version"], 
-                                  capture_output=True, text=True)
-            if result.returncode != 0:
-                raise RuntimeError("gVisor not installed in WSL. Please install gVisor first.")
-                
-        except Exception as e:
-            logger.error(f"gVisor setup error: {str(e)}")
-            raise RuntimeError("gVisor setup failed. Please ensure WSL 2 and gVisor are properly installed.")
-    
-    def _convert_windows_path_to_wsl(self, windows_path: str) -> str:
-        """Convert Windows path to WSL path"""
-        path = windows_path.replace('\\', '/')
-        if path.startswith('C:'):
-            return '/mnt/c' + path[2:]
-        return path
     
     def _get_container(self, function_id: str) -> Optional[str]:
         """Get a container from the pool or create a new one"""
@@ -150,65 +115,64 @@ class GVisorEngine:
             self.container_pool[function_id].append(container_id)
         else:
             # Clean up excess container
-            subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"{self.runsc_path} kill {container_id}"
-            ], check=True)
+            subprocess.run(['docker', 'stop', container_id], check=True)
+            subprocess.run(['docker', 'rm', container_id], check=True)
     
     def _create_container(self, function: Function) -> str:
         """Create a new container for a function"""
         try:
-            # Create a temporary directory in WSL
-            temp_dir = subprocess.run(
-                ["wsl", "-e", "bash", "-c", "mktemp -d"],
-                capture_output=True, text=True
-            ).stdout.strip()
-            
-            # Convert Windows path to WSL path
-            code_path = self._convert_windows_path_to_wsl(function.code_path)
-            
-            # Copy function code to temp directory in WSL
-            subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"cp {code_path} {temp_dir}/handler.py"
-            ], check=True)
-            
-            # Create a simple Dockerfile
-            dockerfile = f"""
-FROM python:3.10-slim
+            # Store function metadata if not already stored
+            function_id = str(function.id)
+            if function_id not in self.function_metadata:
+                self.register_function(function)
+                
+            # Create a temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Read function code from code_path
+                with open(function.code_path, "r") as src_file:
+                    code_content = src_file.read()
+                    
+                # Write the code to the temp directory
+                with open(os.path.join(temp_dir, "handler.py"), "w") as f:
+                    f.write(code_content)
+                
+                # Create a simple Dockerfile with additional dependencies if needed
+                runtime = function.runtime
+                dockerfile = f"""
+FROM python:3.10-{runtime}
 WORKDIR /app
 COPY handler.py /app/
+RUN pip install --no-cache-dir fastapi uvicorn
 CMD ["python", "handler.py"]
 """
-            with open("Dockerfile", "w") as f:
-                f.write(dockerfile)
-            
-            # Copy Dockerfile to WSL
-            subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"cp /mnt/c/Users/{os.getenv('USERNAME')}/Dockerfile {temp_dir}/Dockerfile"
-            ], check=True)
-            
-            # Build the image in WSL
-            image_name = f"function-{function.id}"
-            subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"cd {temp_dir} && docker build -t {image_name} ."
-            ], check=True)
-            
-            # Run the container with gVisor in WSL
-            container_id = subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"{self.runsc_path} run --rootless --network=none --memory-limit {function.memory}m {image_name}"
-            ], capture_output=True, text=True).stdout.strip()
-            
-            # Clean up temp directory
-            subprocess.run([
-                "wsl", "-e", "bash", "-c",
-                f"rm -rf {temp_dir}"
-            ], check=True)
-            
-            return container_id
+                with open(os.path.join(temp_dir, "Dockerfile"), "w") as f:
+                    f.write(dockerfile)
+                
+                # Build the image using subprocess instead of docker-py
+                image_name = f"function-{function.id}"
+                subprocess.run(
+                    ['docker', 'build', '-t', image_name, temp_dir],
+                    check=True
+                )
+                
+                # Run the container with gVisor using subprocess
+                env_vars = [
+                    "-e", f"FUNCTION_ID={function_id}",
+                    "-e", f"FUNCTION_NAME={function.name}",
+                    "-e", f"FUNCTION_TIMEOUT={function.timeout}"
+                ]
+                
+                result = subprocess.run(
+                    ['docker', 'run', '--runtime=runsc', '-d', '--memory', f"{function.memory}m"] + 
+                    env_vars + [image_name],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                # Return the container ID
+                container_id = result.stdout.strip()
+                return container_id
             
         except Exception as e:
             logger.error(f"Error creating container: {str(e)}")
@@ -216,51 +180,71 @@ CMD ["python", "handler.py"]
     
     async def execute_function(self, function: Function, request: FunctionExecutionRequest):
         start_time = time.time()
+        
+        # Register function metadata if not already registered
+        function_id = str(function.id)
+        if function_id not in self.function_metadata:
+            self.register_function(function)
+            
         try:
             # Try to get a container from the pool
-            container_id = self._get_container(str(function.id))
+            container_id = self._get_container(function_id)
             
             # If no container available, create a new one
             if not container_id:
                 container_id = self._create_container(function)
             
             try:
-                # Execute the function
-                result = subprocess.run([
-                    "wsl", "-e", "bash", "-c",
-                    f"{self.runsc_path} exec {container_id} python handler.py"
-                ], capture_output=True, text=True)
+                # Execute the function using Docker exec command
+                env_vars = [
+                    "-e", f"REQUEST_DATA={json.dumps(request.dict())}",
+                    "-e", f"FUNCTION_TIMEOUT={function.timeout}"
+                ]
                 
-                # Check for errors
-                if result.returncode != 0:
-                    raise Exception(f"Function execution failed: {result.stderr}")
+                result = subprocess.run(
+                    ['docker', 'exec'] + env_vars + [container_id, 'python', '/app/handler.py'],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
                 
                 # Return container to pool
-                self._return_container(str(function.id), container_id)
+                self._return_container(function_id, container_id)
                 
                 end_time = time.time()
+                execution_time = end_time - start_time
+                
+                # Log metrics
+                logger.info(f"Function {function.name} (ID: {function_id}) executed in {execution_time:.4f} seconds")
                 
                 return {
                     "status": "success",
+                    "function_id": function_id,
+                    "function_name": function.name,
                     "output": result.stdout,
-                    "error": result.stderr,
-                    "exit_code": result.returncode,
-                    "execution_time": end_time - start_time
+                    "execution_time": execution_time
                 }
                 
-            except Exception as e:
+            except subprocess.CalledProcessError as e:
                 # If there's an error, clean up the container
-                subprocess.run([
-                    "wsl", "-e", "bash", "-c",
-                    f"{self.runsc_path} kill {container_id}"
-                ], check=True)
-                raise e
+                subprocess.run(['docker', 'stop', container_id], check=False)
+                subprocess.run(['docker', 'rm', container_id], check=False)
+                
+                return {
+                    "status": "error",
+                    "function_id": function_id,
+                    "function_name": function.name,
+                    "error": e.stderr,
+                    "execution_time": time.time() - start_time
+                }
                 
         except Exception as e:
             logger.error(f"Error executing function {function.id}: {str(e)}")
             end_time = time.time()
             return {
                 "status": "error",
+                "function_id": function_id,
+                "function_name": function.name,
                 "error": str(e),
                 "execution_time": end_time - start_time
             } 

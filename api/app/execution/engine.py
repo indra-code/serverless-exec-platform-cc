@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 import docker
 import time
 import logging
@@ -8,22 +8,27 @@ from queue import Queue
 import threading
 from ..models.function import Function
 from ..schemas.function import FunctionExecutionRequest
+import tempfile
+import subprocess
 
 logger = logging.getLogger(__name__)
 
 class ContainerPool:
-    def __init__(self, max_size: int = 10):
+    def __init__(self, max_size: int = 10, docker_client: Optional[docker.DockerClient] = None):
         self.max_size = max_size
+        self.docker_client = docker_client or docker.from_env()
         self.pool: Dict[str, List[docker.models.containers.Container]] = {}
         self.lock = threading.Lock()
+        self.ensure_docker_available()
+        
+    def ensure_docker_available(self):
+        """Ensure Docker is available and running"""
         try:
-            # Try to connect to Docker Desktop for Windows
-            self.client = docker.from_env()
-            # Test the connection
-            self.client.ping()
+            self.docker_client.ping()
+            logger.info("Docker is available and running")
         except Exception as e:
-            logger.error(f"Failed to connect to Docker: {str(e)}")
-            raise RuntimeError("Docker is not running. Please start Docker Desktop for Windows.")
+            logger.error(f"Docker is not available: {str(e)}")
+            raise
         
     def get_container(self, function_id: str) -> Optional[docker.models.containers.Container]:
         with self.lock:
@@ -54,7 +59,7 @@ class ContainerPool:
             if code_path.startswith('C:'):
                 code_path = '/mnt/c' + code_path[2:]
         
-        container = self.client.containers.run(
+        container = self.docker_client.containers.run(
             image="python:3.10-slim",
             volumes={code_path: {'bind': '/app/code', 'mode': 'ro'}},
             command=["python", "/app/code/handler.py"],
@@ -68,7 +73,8 @@ class ContainerPool:
         return container
 
 class ExecutionEngine:
-    def __init__(self):
+    def __init__(self, docker_client: Optional[docker.DockerClient] = None):
+        self.docker_client = docker_client or docker.from_env()
         self.container_pool = ContainerPool()
         self.warmup_queue = Queue()
         self.executor = ThreadPoolExecutor(max_workers=10)
@@ -132,4 +138,37 @@ class ExecutionEngine:
             return {
                 "status": "error",
                 "error": str(e)
-            } 
+            }
+
+    def execute_function_from_code(self, function_id: str, code: str, runtime: str) -> dict:
+        """Execute a function using Docker"""
+        try:
+            # Create a temporary directory for the function
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Write the function code to a file
+                code_path = os.path.join(temp_dir, "function.py")
+                with open(code_path, "w") as f:
+                    f.write(code)
+
+                # Build and run the container
+                container = self.docker_client.containers.run(
+                    f"python:3.9-slim",
+                    command=["python", "/app/function.py"],
+                    volumes={temp_dir: {'bind': '/app', 'mode': 'ro'}},
+                    remove=True,
+                    detach=False
+                )
+
+                return {
+                    "success": True,
+                    "output": container.decode('utf-8') if isinstance(container, bytes) else container,
+                    "error": None
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to execute function: {str(e)}")
+            raise
+
+    def cleanup(self):
+        """Clean up any resources"""
+        pass  # No cleanup needed as we use temporary directories 

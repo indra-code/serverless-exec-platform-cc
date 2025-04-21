@@ -1,0 +1,14 @@
+2025-04-21 23:16:03,422 - worker - INFO - Worker started - waiting for jobs...
+2025-04-21 23:17:13,455 - worker - INFO - Got job: ae8124d1-f3c5-46e9-94eb-df5fc58141eb
+2025-04-21 23:17:13,456 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py: ['import os', 'import sys', 'import json']
+2025-04-21 23:17:13,456 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,456 - worker.k8s_job_maker - INFO - Creating job job-ae8124d1 to run code at /hosthome/jayanth/serverless-exec-platform-cc/functions/function_ae8124d1-f3c5-46e9-94eb-df5fc58141eb.py
+2025-04-21 23:17:13,457 - worker.k8s_job_maker - INFO - Submitting job job-ae8124d1 to Kubernetes
+2025-04-21 23:17:13,470 - worker.k8s_job_maker - INFO - Waiting for job job-ae8124d1 to complete...
+2025-04-21 23:17:17,514 - worker.k8s_job_maker - INFO - Job job-ae8124d1 completed successfully
+2025-04-21 23:17:17,514 - worker - INFO - Job ae8124d1-f3c5-46e9-94eb-df5fc58141eb created successfully
