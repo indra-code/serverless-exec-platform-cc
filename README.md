@@ -11,6 +11,7 @@ A serverless execution platform that supports both Docker and gVisor runtimes, w
 - Metrics collection
 - Error handling
 - Automatic platform detection (WSL/Linux)
+- Web-based frontend interface for function management
 
 ## Prerequisites
 
@@ -89,6 +90,7 @@ A serverless execution platform that supports both Docker and gVisor runtimes, w
 
 ## Running the Application
 
+### Backend API
 1. Start the FastAPI server:
    ```bash
    python -m api.app.main
@@ -97,6 +99,24 @@ A serverless execution platform that supports both Docker and gVisor runtimes, w
 2. The server will be available at `http://localhost:8000`
 
 3. Access the API documentation at `http://localhost:8000/docs`
+
+### Frontend Application
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. The frontend will be available at `http://localhost:3000`
 
 ## API Usage
 
@@ -138,6 +158,21 @@ curl http://localhost:8000/
 ```
 
 The response will include the platform information and available runtimes.
+
+## Project Structure
+
+```
+serverless-exec-platform-cc/
+├── api/                 # API endpoints and controllers
+├── app/                 # Core application logic
+├── docker/              # Docker configurations and templates
+├── frontend/            # Web-based UI
+├── function_docker/     # Docker function execution logic
+├── functions/           # Stored function definitions
+├── uploads/             # Temporary storage for uploaded files
+├── requirements.txt     # Python dependencies
+└── README.md
+```
 
 ## Troubleshooting
 
