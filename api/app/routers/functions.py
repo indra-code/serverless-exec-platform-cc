@@ -14,6 +14,7 @@ import glob
 from kubernetes import client
 from kubernetes.config import load_kube_config
 import subprocess
+from ..models.settings import PlatformSettings
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -273,300 +274,260 @@ def update_function(function_id: int, function: FunctionUpdate, db: Session = De
 async def execute_function(
     function_id: int,
     request: FunctionExecutionRequest,
-    runtime: Optional[str] = "cli",
+    runtime: Optional[str] = "cli+gvisor",  # Default to CLI+gVisor runtime
+    enforce_gvisor: Optional[bool] = None,  # Now optional, can be overridden by platform settings
+    wait_for_logs: Optional[bool] = True,   # Whether to wait for logs
+    max_wait_seconds: Optional[int] = 60,   # Maximum seconds to wait for job
     db: Session = Depends(get_db),
     fastapi_request: Request = None
 ):
     try:
+        # Get platform-wide security settings
+        try:
+            platform_settings = PlatformSettings.get_settings(db)
+            
+            # If enforce_gvisor is not explicitly set in the request, use the platform setting
+            if enforce_gvisor is None:
+                enforce_gvisor = platform_settings.enforce_gvisor
+        except Exception as settings_error:
+            logger.warning(f"Could not load platform settings: {settings_error}")
+            # Default to enforcing gVisor if settings can't be loaded
+            if enforce_gvisor is None:
+                enforce_gvisor = True
+        
         function = db.query(Function).filter(Function.id == function_id).first()
         if function is None:
             raise HTTPException(status_code=404, detail="Function not found")
         
-        logger.info(f"Starting execution of function {function_id} with runtime {runtime}")
+        logger.info(f"Starting execution of function {function_id} with runtime {runtime}, enforce_gvisor={enforce_gvisor}")
         
         # Initialize metrics collector
         metrics_collector = MetricsCollector(db)
         start_time = time.time()
         
         try:
-            # Check if function already has a worker pod
-            pod_name = function.worker_pod
-            if pod_name:
-                # Verify if the worker pod exists
-                cmd = ["kubectl", "get", "pod", pod_name]
-                pod_check = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if pod_check.returncode != 0:
-                    logger.info(f"Worker pod {pod_name} no longer exists. Creating a new one.")
-                    pod_name = None
-                else:
-                    logger.info(f"Reusing existing worker pod: {pod_name}")
+            # Check Docker runtime permission from platform settings
+            # Default to disallowing Docker runtime for security if platform settings don't exist
+            docker_allowed = False
+            try:
+                if hasattr(locals(), 'platform_settings') and platform_settings and hasattr(platform_settings, 'allow_docker_runtime'):
+                    docker_allowed = platform_settings.allow_docker_runtime
+            except Exception as e:
+                logger.warning(f"Could not check Docker runtime permission from platform settings: {e}")
+                # Default to disallowing Docker for security
+                docker_allowed = False
             
-            # If no worker pod exists or the previous one is gone, create a new function execution
-            if not pod_name:
-                # Select execution engine based on runtime
-                if runtime == "cli" and fastapi_request.state.cli_engine:
-                    logger.info(f"Using CLI engine for function {function_id}")
-                    engine = fastapi_request.state.cli_engine
-                elif runtime == "docker":
-                    logger.info(f"Using Docker engine for function {function_id}")
-                    engine = fastapi_request.state.docker_engine
-                elif runtime == "gvisor" and fastapi_request.state.gvisor_engine:
-                    logger.info(f"Using gVisor engine for function {function_id}")
-                    engine = fastapi_request.state.gvisor_engine
-                else:
-                    available_runtimes = ["docker"]
-                    if hasattr(fastapi_request.state, 'cli_engine') and fastapi_request.state.cli_engine:
-                        available_runtimes.append("cli")
-                    if hasattr(fastapi_request.state, 'gvisor_engine') and fastapi_request.state.gvisor_engine:
-                        available_runtimes.append("gvisor")
-                        
+            if runtime == "docker" and not docker_allowed:
+                raise HTTPException(
+                    status_code=400,
+                    detail="SECURITY ERROR: Docker runtime is disabled by platform configuration."
+                )
+            
+            # Determine available engines with gVisor support if strict enforcement is enabled
+            available_engines = []
+            
+            # Check if CLI+gVisor is available and has verified gVisor
+            has_cli_gvisor = (
+                hasattr(fastapi_request.state, 'cli_engine') and 
+                fastapi_request.state.cli_engine is not None and
+                getattr(fastapi_request.state.cli_engine, 'verified_gvisor', False)
+            )
+            
+            # Check if dedicated gVisor engine is available 
+            has_gvisor_engine = (
+                hasattr(fastapi_request.state, 'gvisor_engine') and 
+                fastapi_request.state.gvisor_engine is not None
+            )
+            
+            # With strict gVisor enforcement, we need at least one secure runtime
+            if enforce_gvisor and not (has_cli_gvisor or has_gvisor_engine):
+                raise HTTPException(
+                    status_code=400,
+                    detail="SECURITY ERROR: gVisor security is required but no gVisor runtime is available. Function execution aborted."
+                )
+            
+            # Select execution engine based on runtime
+            if runtime in ["cli", "cli+gvisor"] and fastapi_request.state.cli_engine:
+                # When enforcing gVisor, verify the CLI engine has gVisor support
+                if enforce_gvisor and not has_cli_gvisor:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Runtime '{runtime}' not available. Available runtimes: {', '.join(available_runtimes)}"
+                        detail="SECURITY ERROR: CLI engine does not have verified gVisor support but gVisor is required. Function execution aborted."
                     )
+                logger.info(f"Using CLI+gVisor engine for function {function_id}")
+                engine = fastapi_request.state.cli_engine
+            elif runtime == "docker":
+                # Docker doesn't support gVisor isolation directly
+                if enforce_gvisor:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="SECURITY ERROR: Docker runtime cannot provide gVisor isolation but gVisor is required. Function execution aborted."
+                    )
+                logger.info(f"Using Docker engine for function {function_id}")
+                engine = fastapi_request.state.docker_engine
+            elif runtime == "gvisor" and fastapi_request.state.gvisor_engine:
+                logger.info(f"Using gVisor engine for function {function_id}")
+                engine = fastapi_request.state.gvisor_engine
+            else:
+                # Build list of available secure runtimes
+                secure_runtimes = []
+                if has_cli_gvisor:
+                    secure_runtimes.append("cli+gvisor") 
+                if has_gvisor_engine:
+                    secure_runtimes.append("gvisor")
+                    
+                # Add non-secure runtimes if not enforcing gVisor
+                if not enforce_gvisor:
+                    if hasattr(fastapi_request.state, 'docker_engine'):
+                        secure_runtimes.append("docker")
+                    if hasattr(fastapi_request.state, 'cli_engine') and not has_cli_gvisor:
+                        secure_runtimes.append("cli")
                 
-                # Execute the function
-                logger.info(f"Submitting function {function_id} to engine")
-                result = await engine.execute_function(function, request)
-                logger.info(f"Engine execution result: {result}")
-                
-                # Get job ID from result
-                job_id = result.get("job_id")
-                if not job_id:
-                    raise HTTPException(status_code=500, detail="No job ID returned from execution")
-                
-                logger.info(f"Got job ID: {job_id}")
-                
-                # List all pods
-                cmd = ["kubectl", "get", "pods"]
-                pods_result = subprocess.run(cmd, capture_output=True, text=True)
-                logger.info(f"Current pods:\n{pods_result.stdout}")
-                
-                # Wait for pod to be created and get its name
-                max_retries = 60  # Wait up to 60 seconds for pod creation
-                for attempt in range(max_retries):
-                    logger.info(f"Waiting for pod to be created (attempt {attempt + 1}/{max_retries})")
-                    
-                    # First try with the job-name label - standard Kubernetes label
-                    cmd = ["kubectl", "get", "pods", "--selector=batch.kubernetes.io/job-name=" + job_id, "-o", "jsonpath='{.items[*].metadata.name}'"]
-                    pod_name_result = subprocess.run(cmd, capture_output=True, text=True)
-                    
-                    if pod_name_result.returncode == 0 and pod_name_result.stdout.strip("'"):
-                        pod_name = pod_name_result.stdout.strip("'")
-                        logger.info(f"Found pod name from batch.kubernetes.io/job-name label: {pod_name}")
-                        break
-                    
-                    # Try alternative selector with job-name label
-                    cmd = ["kubectl", "get", "pods", "--selector=job-name=" + job_id, "-o", "jsonpath='{.items[*].metadata.name}'"]
-                    pod_name_result = subprocess.run(cmd, capture_output=True, text=True)
-                    
-                    if pod_name_result.returncode == 0 and pod_name_result.stdout.strip("'"):
-                        pod_name = pod_name_result.stdout.strip("'")
-                        logger.info(f"Found pod name from job-name label: {pod_name}")
-                        break
-                    
-                    # Try direct name listing (look for pods that start with the job ID)
-                    cmd = ["kubectl", "get", "pods", "-o", "name"]
-                    pods_list_result = subprocess.run(cmd, capture_output=True, text=True)
-                    
-                    if pods_list_result.returncode == 0:
-                        pod_lines = pods_list_result.stdout.strip().split('\n')
-                        for pod_line in pod_lines:
-                            # Extract just the pod name without the "pod/" prefix
-                            if pod_line.startswith("pod/"):
-                                potential_pod = pod_line[4:] # Skip "pod/"
-                            else:
-                                potential_pod = pod_line
-                                
-                            # Check if this pod starts with our job ID
-                            if potential_pod.startswith(job_id):
-                                pod_name = potential_pod
-                                logger.info(f"Found pod name by prefix matching: {pod_name}")
-                                break
-                        
-                        if pod_name:
-                            break
-                    
-                    # Check for any recent pods (as a last resort)
-                    if attempt > 10 and attempt % 5 == 0:
-                        cmd = ["kubectl", "get", "pods", "--sort-by=.metadata.creationTimestamp", "-o", "jsonpath='{.items[-1:].metadata.name}'"]
-                        latest_pod_result = subprocess.run(cmd, capture_output=True, text=True)
-                        
-                        if latest_pod_result.returncode == 0 and latest_pod_result.stdout.strip("'"):
-                            latest_pod = latest_pod_result.stdout.strip("'")
-                            # Only use this if it was created recently (last minute)
-                            cmd = ["kubectl", "get", "pod", latest_pod, "-o", "jsonpath='{.metadata.creationTimestamp}'"]
-                            timestamp_result = subprocess.run(cmd, capture_output=True, text=True)
-                            
-                            if timestamp_result.returncode == 0:
-                                pod_time = timestamp_result.stdout.strip("'")
-                                # Just use the most recent pod as a fallback
-                                pod_name = latest_pod
-                                logger.info(f"Using most recent pod as fallback: {pod_name} (created at {pod_time})")
-                                break
-                    
-                    logger.info("Pod not found yet, waiting...")
-                    time.sleep(1)
-                
-                if not pod_name:
-                    logger.error("Failed to get pod name after maximum retries")
-                    # List all pods to diagnose
-                    cmd = ["kubectl", "get", "pods"]
-                    all_pods = subprocess.run(cmd, capture_output=True, text=True)
-                    logger.error(f"All pods: {all_pods.stdout}")
-                    raise HTTPException(status_code=500, detail="Failed to get pod name after waiting")
-                
-                # Store the pod name in the function record
-                function.worker_pod = pod_name
-                db.commit()
-                logger.info(f"Stored worker pod {pod_name} for function {function_id}")
-            
-            # At this point we have a valid pod_name (either existing or newly created)
-            # Wait for job completion and get logs
-            max_retries = 60  # Wait up to 60 seconds
-            for attempt in range(max_retries):
-                logger.info(f"Checking job status (attempt {attempt + 1}/{max_retries})")
-                
-                # Check job status
-                cmd = ["kubectl", "get", "pod", pod_name, "-o", "json"]
-                logger.info(f"Running command: {' '.join(cmd)}")
-                status_result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if status_result.returncode == 0:
-                    pod = json.loads(status_result.stdout)
-                    status = pod["status"]["phase"]
-                    logger.info(f"Pod status: {status}")
-                    
-                    # Log more pod details
-                    logger.info(f"Pod details: {json.dumps(pod['status'], indent=2)}")
-                    
-                    if status == "Succeeded" or status == "Running":
-                        logger.info("Job is running or succeeded, getting logs")
-                        # Get logs
-                        cmd = ["kubectl", "logs", pod_name]
-                        logger.info(f"Running command: {' '.join(cmd)}")
-                        logs_result = subprocess.run(cmd, capture_output=True, text=True)
-                        
-                        if logs_result.returncode == 0:
-                            logs = logs_result.stdout
-                            logger.info(f"Got logs (length: {len(logs)})")
-                            
-                            # If running and no logs yet, continue waiting
-                            if status == "Running" and not logs:
-                                logger.info("Pod is running but no logs yet, continuing to wait")
-                                time.sleep(1)
-                                continue
-                            
-                            end_time = time.time()
-                            
-                            # Collect metrics
-                            await metrics_collector.collect_execution_metrics(
-                                function=function,
-                                request=request,
-                                start_time=start_time,
-                                end_time=end_time,
-                                success=True,
-                                error=None,
-                                resource_usage={
-                                    "memory_used": function.memory,
-                                    "execution_time": end_time - start_time
-                                }
-                            )
-                            
-                            return {
-                                "status": "success",
-                                "pod_name": pod_name,
-                                "logs": logs
-                            }
-                        else:
-                            logger.error(f"Failed to get logs: {logs_result.stderr}")
-                            raise HTTPException(status_code=500, detail=f"Failed to get job logs: {logs_result.stderr}")
-                    elif status == "Failed":
-                        logger.error("Job failed, getting failure logs")
-                        # Get logs for failed job
-                        cmd = ["kubectl", "logs", pod_name]
-                        logs_result = subprocess.run(cmd, capture_output=True, text=True)
-                        logs = logs_result.stdout if logs_result.returncode == 0 else "Failed to get logs"
-                        logger.error(f"Failure logs: {logs}")
-                        
-                        # Since the pod failed, clear it from the function record
-                        function.worker_pod = None
-                        db.commit()
-                        logger.info(f"Cleared failed worker pod for function {function_id}")
-                        
-                        # Get pod events
-                        cmd = ["kubectl", "describe", "pod", pod_name]
-                        events_result = subprocess.run(cmd, capture_output=True, text=True)
-                        if events_result.returncode == 0:
-                            logger.error(f"Pod events:\n{events_result.stdout}")
-                        
-                        end_time = time.time()
-                        await metrics_collector.collect_execution_metrics(
-                            function=function,
-                            request=request,
-                            start_time=start_time,
-                            end_time=end_time,
-                            success=False,
-                            error="Job failed",
-                            resource_usage={
-                                "memory_used": function.memory,
-                                "execution_time": end_time - start_time
-                            }
-                        )
-                        
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"Job failed: {logs}"
-                        )
+                if not secure_runtimes:
+                    runtime_msg = "No secure runtimes available" if enforce_gvisor else "No runtimes available"
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Runtime '{runtime}' not available. {runtime_msg}."
+                    )
                 else:
-                    logger.error(f"Error getting pod status: {status_result.stderr}")
-                    
-                    # If we can't get the pod status, clear it from the function record
-                    function.worker_pod = None
-                    db.commit()
-                    logger.info(f"Cleared worker pod for function {function_id} due to status check failure")
-                
-                time.sleep(1)
+                    runtime_qualifier = "secure " if enforce_gvisor else ""
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Runtime '{runtime}' not available. Available {runtime_qualifier}runtimes: {', '.join(secure_runtimes)}"
+                    )
             
-            # If we get here, the job timed out
-            logger.error(f"Pod {pod_name} timed out after {max_retries} seconds")
+            # Execute the function through the selected engine
+            logger.info(f"Submitting function {function_id} to engine with gVisor security enforced={enforce_gvisor}")
+            result = await engine.execute_function(function, request)
+            logger.info(f"Engine execution result: {result}")
             
-            # Get final pod state
-            cmd = ["kubectl", "describe", "pod", pod_name]
-            final_state = subprocess.run(cmd, capture_output=True, text=True)
-            logger.error(f"Final pod state:\n{final_state.stdout}")
+            # Check for security issues with gVisor if enforcing
+            if enforce_gvisor and result.get("status") == "success" and not result.get("gvisor_verified", False):
+                raise HTTPException(
+                    status_code=500,
+                    detail="SECURITY ERROR: Function executed but gVisor security could not be verified. Execution rejected."
+                )
             
-            # Clear the worker pod from the function record on timeout
-            function.worker_pod = None
-            db.commit()
-            logger.info(f"Cleared worker pod for function {function_id} due to timeout")
+            # Other error checks
+            if result.get("status") == "error" and result.get("security_issue"):
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"SECURITY ERROR: {result.get('error', 'Function execution failed with a security error')}. Execution aborted."
+                )
             
+            # Get job ID from result
+            job_id = result.get("job_id")
+            if not job_id:
+                raise HTTPException(status_code=500, detail="No job ID returned from execution")
+            
+            logger.info(f"Got job ID: {job_id}")
+            
+            # Format job name for kubernetes
+            short_job_id = job_id[:8] if len(job_id) > 8 else job_id
+            job_name = f"job-{short_job_id}"
+            logger.info(f"Job name: {job_name}")
+            
+            # Record metrics for job submission
             end_time = time.time()
             await metrics_collector.collect_execution_metrics(
                 function=function,
                 request=request,
                 start_time=start_time,
                 end_time=end_time,
-                success=False,
-                error="Job timed out",
+                success=True,
+                error=None,
                 resource_usage={
                     "memory_used": function.memory,
-                    "execution_time": end_time - start_time
+                    "execution_time": 0,
+                    "submission_time": end_time - start_time
                 }
             )
             
-            raise HTTPException(status_code=500, detail="Job execution timed out")
+            # If we're not waiting for logs, return immediately
+            if not wait_for_logs:
+                return {
+                    "status": "submitted",
+                    "job_id": job_id,
+                    "job_name": job_name,
+                    "message": "Function submitted, not waiting for logs",
+                    "runtime": runtime
+                }
             
+            # Wait for job to complete and get logs
+            logger.info(f"Waiting for job {job_name} to complete (max {max_wait_seconds} seconds)...")
+            job_completed = False
+            pod_name = None
+            logs = ""
+            
+            # Wait loop for job completion
+            for attempt in range(max_wait_seconds):
+                # Try to check if job exists yet
+                cmd = ["kubectl", "get", "job", job_name, "-o", "json"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    job_data = json.loads(result.stdout)
+                    
+                    # Check if job is complete
+                    if job_data.get("status", {}).get("succeeded", 0) > 0:
+                        logger.info(f"Job {job_name} completed successfully")
+                        job_completed = True
+                        break
+                    elif job_data.get("status", {}).get("failed", 0) > 0:
+                        logger.info(f"Job {job_name} failed")
+                        job_completed = True
+                        break
+                    else:
+                        # Try to find the pod
+                        if not pod_name:
+                            # Try multiple ways to find the pod
+                            pod_cmd = ["kubectl", "get", "pods", f"--selector=job-name={job_name}", "-o", "jsonpath='{.items[0].metadata.name}'"]
+                            pod_result = subprocess.run(pod_cmd, capture_output=True, text=True)
+                            
+                            if pod_result.returncode == 0 and pod_result.stdout.strip("'"):
+                                pod_name = pod_result.stdout.strip("'")
+                                logger.info(f"Found pod: {pod_name}")
+                
+                # If we found a pod, try to get logs even if job is not complete
+                if pod_name:
+                    logs_cmd = ["kubectl", "logs", pod_name]
+                    logs_result = subprocess.run(logs_cmd, capture_output=True, text=True)
+                    
+                    if logs_result.returncode == 0 and logs_result.stdout:
+                        logs = logs_result.stdout
+                        logger.info(f"Retrieved logs from pod {pod_name} (length: {len(logs)})")
+                
+                # If job is still running, wait before checking again
+                if not job_completed:
+                    logger.info(f"Job still running, waiting... (attempt {attempt+1}/{max_wait_seconds})")
+                    time.sleep(1)
+                else:
+                    break
+            
+            # If we didn't find logs from the pod, try getting logs directly from the job
+            if not logs:
+                logger.info(f"Trying to get logs directly from job {job_name}")
+                job_logs_cmd = ["kubectl", "logs", f"job/{job_name}"]
+                job_logs_result = subprocess.run(job_logs_cmd, capture_output=True, text=True)
+                
+                if job_logs_result.returncode == 0 and job_logs_result.stdout:
+                    logs = job_logs_result.stdout
+                    logger.info(f"Retrieved logs from job {job_name} (length: {len(logs)})")
+            
+            # Return the execution result with logs
+            return {
+                "status": "completed" if job_completed else "running",
+                "job_id": job_id,
+                "job_name": job_name,
+                "pod_name": pod_name,
+                "logs": logs,
+                "wait_timeout": not job_completed and max_wait_seconds > 0,
+                "runtime": runtime
+            }
+                
         except Exception as e:
             logger.error(f"Error during execution: {str(e)}")
             logger.error(traceback.format_exc())
-            
-            # Clear the worker pod on exception
-            if function.worker_pod:
-                function.worker_pod = None
-                db.commit()
-                logger.info(f"Cleared worker pod for function {function_id} due to exception")
                 
             end_time = time.time()
             await metrics_collector.collect_execution_metrics(
@@ -585,7 +546,7 @@ async def execute_function(
         logger.error(f"Error executing function: {str(e)}")
         logger.error(traceback.format_exc())
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Function execution failed: {str(e)}"
         )
 
@@ -602,60 +563,277 @@ def delete_function(function_id: int, db: Session = Depends(get_db)):
         db.commit()
         logger.info(f"Successfully deleted function with ID: {function_id}")
         return None
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error deleting function: {str(e)}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error deleting function: {str(e)}"
         )
 
 @router.get("/jobs/{job_id}/status")
 async def get_job_status(job_id: str, db: Session = Depends(get_db)):
-    """Get the status of a job"""
+    """Get the status of a job by checking function records, Kubernetes, and Redis"""
     try:
-        # Get pod status using kubectl
-        cmd = ["kubectl", "get", "pod", job_id, "-o", "json"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # First check if we have a pod name stored for this job
+        pod_name = None
+        short_job_id = job_id[:8] if len(job_id) > 8 else job_id
+        expected_job_name = f"job-{short_job_id}"
         
-        if result.returncode != 0:
-            return {"status": "not_found"}
+        # Find functions with worker pods that match our job ID pattern
+        functions = db.query(Function).filter(Function.worker_pod.isnot(None)).all()
+        for func in functions:
+            if func.worker_pod and expected_job_name in func.worker_pod:
+                pod_name = func.worker_pod
+                logger.info(f"Found matching worker pod {pod_name} for job {job_id}")
+                break
+        
+        # If we found a pod, check its status directly
+        if pod_name:
+            try:
+                cmd = ["kubectl", "get", "pod", pod_name, "-o", "json"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    pod_data = json.loads(result.stdout)
+                    pod_status = pod_data["status"]["phase"]
+                    
+                    if pod_status == "Succeeded":
+                        return {"status": "completed", "pod_name": pod_name}
+                    elif pod_status == "Failed":
+                        return {"status": "failed", "error": "Pod failed", "pod_name": pod_name}
+                    else:
+                        return {"status": "running", "pod_status": pod_status, "pod_name": pod_name}
+                else:
+                    logger.warning(f"Failed to get status for pod {pod_name}: {result.stderr}")
+                    # Pod might have been deleted, continue to other methods
+            except Exception as pod_error:
+                logger.warning(f"Error checking pod status: {str(pod_error)}")
+        
+        # If we couldn't find the pod or get its status, try checking job directly
+        try:
+            cmd = ["kubectl", "get", "job", expected_job_name, "-o", "json"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
             
-        pod = json.loads(result.stdout)
-        status = pod["status"]["phase"]
+            if result.returncode == 0:
+                job_data = json.loads(result.stdout)
+                
+                # Check job status conditions
+                if job_data.get("status", {}).get("succeeded", 0) > 0:
+                    return {"status": "completed", "job_name": expected_job_name}
+                elif job_data.get("status", {}).get("failed", 0) > 0:
+                    return {"status": "failed", "error": "Job failed", "job_name": expected_job_name}
+                else:
+                    active = job_data.get("status", {}).get("active", 0)
+                    if active > 0:
+                        return {"status": "running", "job_name": expected_job_name}
+                    else:
+                        return {"status": "pending", "job_name": expected_job_name}
+            # If job not found, continue to next check
+        except Exception as job_error:
+            logger.warning(f"Error checking job status: {str(job_error)}")
         
-        if status == "Succeeded":
-            return {"status": "completed"}
-        elif status == "Failed":
-            return {"status": "failed", "error": "Job failed in Kubernetes"}
-        else:
-            return {"status": "running"}
+        # Check Redis for completed or failed jobs
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            
+            # Check completed jobs
+            completed_jobs = r.lrange('completed_jobs', 0, -1)
+            for job_data in completed_jobs:
+                try:
+                    job = json.loads(job_data)
+                    if job.get('job_id') == job_id:
+                        return {
+                            "status": job.get('status', 'completed'),
+                            "runtime": job.get('runtime'),
+                            "timestamp": job.get('timestamp'),
+                            "source": "redis_completed"
+                        }
+                except json.JSONDecodeError:
+                    continue
+            
+            # Check failed jobs
+            failed_jobs = r.lrange('failed_jobs', 0, -1)
+            for job_data in failed_jobs:
+                try:
+                    job = json.loads(job_data)
+                    if job.get('job_id') == job_id:
+                        return {
+                            "status": "failed",
+                            "error": job.get('error'),
+                            "timestamp": job.get('timestamp'),
+                            "source": "redis_failed"
+                        }
+                except json.JSONDecodeError:
+                    continue
+            
+            # Check job queue
+            queued_jobs = r.lrange('job_queue', 0, -1)
+            for job_data in queued_jobs:
+                try:
+                    job = json.loads(job_data)
+                    if job.get('job_id') == job_id:
+                        return {"status": "queued", "source": "redis_queue"}
+                except json.JSONDecodeError:
+                    continue
+        except Exception as redis_error:
+            logger.warning(f"Error checking Redis: {str(redis_error)}")
+        
+        # If not found anywhere, job doesn't exist or has been deleted
+        return {"status": "not_found", "job_id": job_id}
             
     except Exception as e:
         logger.error(f"Error getting job status: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting job status: {str(e)}"
-        )
+        return {"status": "error", "error": str(e), "job_id": job_id}
 
 @router.get("/jobs/{job_id}/logs")
 async def get_job_logs(job_id: str, db: Session = Depends(get_db)):
-    """Get the logs for a completed job"""
+    """Get logs directly from Kubernetes for a job"""
     try:
-        # Get pod logs using kubectl
-        cmd = ["kubectl", "logs", job_id]
+        # Format the expected job name
+        short_job_id = job_id[:8] if len(job_id) > 8 else job_id
+        job_name = f"job-{short_job_id}"
+        
+        logger.info(f"========== LOG RETRIEVAL START FOR {job_id} ==========")
+        logger.info(f"Using short job ID: {short_job_id}, job name: {job_name}")
+        
+        # First try to get logs directly from the job
+        logger.info(f"ATTEMPT 1: Getting logs directly from job/{job_name}")
+        cmd = ["kubectl", "logs", f"job/{job_name}"]
+        logger.info(f"Running command: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
         
-        if result.returncode != 0:
-            return {"logs": f"Error getting logs: {result.stderr}"}
-            
-        return {"logs": result.stdout}
+        logger.info(f"Exit code: {result.returncode}")
+        logger.info(f"Stdout length: {len(result.stdout)}")
+        if result.stderr:
+            logger.info(f"Stderr: {result.stderr}")
         
+        if result.returncode == 0 and result.stdout:
+            logger.info("SUCCESS: Got logs directly from job")
+            logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+            return {"logs": result.stdout}
+        
+        # If that didn't work, find the pod associated with the job
+        logger.info(f"ATTEMPT 2: Finding pod for job {job_name} using job-name selector")
+        pod_cmd = ["kubectl", "get", "pods", "--selector=job-name=" + job_name, "-o", "jsonpath='{.items[0].metadata.name}'"]
+        logger.info(f"Running command: {' '.join(pod_cmd)}")
+        pod_result = subprocess.run(pod_cmd, capture_output=True, text=True)
+        
+        logger.info(f"Exit code: {pod_result.returncode}")
+        logger.info(f"Stdout: {pod_result.stdout}")
+        if pod_result.stderr:
+            logger.info(f"Stderr: {pod_result.stderr}")
+        
+        # If first selector didn't work, try another common selector
+        if pod_result.returncode != 0 or not pod_result.stdout.strip("'"):
+            logger.info(f"ATTEMPT 3: Finding pod for job {job_name} using job selector")
+            pod_cmd = ["kubectl", "get", "pods", "--selector=job=" + job_name, "-o", "jsonpath='{.items[0].metadata.name}'"]
+            logger.info(f"Running command: {' '.join(pod_cmd)}")
+            pod_result = subprocess.run(pod_cmd, capture_output=True, text=True)
+            
+            logger.info(f"Exit code: {pod_result.returncode}")
+            logger.info(f"Stdout: {pod_result.stdout}")
+            if pod_result.stderr:
+                logger.info(f"Stderr: {pod_result.stderr}")
+        
+        # If pod found, get logs
+        if pod_result.returncode == 0 and pod_result.stdout.strip("'"):
+            pod_name = pod_result.stdout.strip("'")
+            logger.info(f"SUCCESS: Found pod {pod_name}, getting logs")
+            logs_cmd = ["kubectl", "logs", pod_name]
+            logger.info(f"Running command: {' '.join(logs_cmd)}")
+            logs_result = subprocess.run(logs_cmd, capture_output=True, text=True)
+            
+            logger.info(f"Exit code: {logs_result.returncode}")
+            logger.info(f"Stdout length: {len(logs_result.stdout)}")
+            if logs_result.stderr:
+                logger.info(f"Stderr: {logs_result.stderr}")
+            
+            if logs_result.returncode == 0:
+                logger.info("SUCCESS: Got logs from pod")
+                logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+                return {"logs": logs_result.stdout}
+            else:
+                logger.error(f"FAILED: Error getting logs from pod {pod_name}")
+                logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+                return {"logs": f"Error getting logs: {logs_result.stderr}", "error": True}
+        
+        # If we can't find pod by label, try listing all pods and grep for job ID
+        logger.info(f"ATTEMPT 4: Listing all pods to find any related to job {job_name}")
+        list_cmd = ["kubectl", "get", "pods", "-o", "wide"]
+        logger.info(f"Running command: {' '.join(list_cmd)}")
+        list_result = subprocess.run(list_cmd, capture_output=True, text=True)
+        
+        logger.info(f"Exit code: {list_result.returncode}")
+        if list_result.stderr:
+            logger.info(f"Stderr: {list_result.stderr}")
+        
+        if list_result.returncode == 0:
+            # Log all pods for debugging
+            logger.info(f"All pods: {list_result.stdout}")
+            pod_found = False
+            
+            # Try to find any pod containing our job ID in the name
+            for line in list_result.stdout.splitlines():
+                if short_job_id in line:
+                    parts = line.split()
+                    if parts:
+                        potential_pod = parts[0]
+                        logger.info(f"Found potential pod: {potential_pod}")
+                        pod_found = True
+                        
+                        # Try to get logs from this pod
+                        logger.info(f"ATTEMPT 5: Getting logs from potential pod {potential_pod}")
+                        pod_logs_cmd = ["kubectl", "logs", potential_pod]
+                        logger.info(f"Running command: {' '.join(pod_logs_cmd)}")
+                        pod_logs_result = subprocess.run(pod_logs_cmd, capture_output=True, text=True)
+                        
+                        logger.info(f"Exit code: {pod_logs_result.returncode}")
+                        logger.info(f"Stdout length: {len(pod_logs_result.stdout)}")
+                        if pod_logs_result.stderr:
+                            logger.info(f"Stderr: {pod_logs_result.stderr}")
+                        
+                        if pod_logs_result.returncode == 0:
+                            logger.info("SUCCESS: Got logs from potential pod")
+                            logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+                            return {"logs": pod_logs_result.stdout}
+            
+            if not pod_found:
+                logger.info("No pods found with matching job ID in name")
+        
+        # Last resort - describe the job for any useful information
+        logger.info(f"ATTEMPT 6: Describing job {job_name}")
+        describe_cmd = ["kubectl", "describe", f"job/{job_name}"]
+        logger.info(f"Running command: {' '.join(describe_cmd)}")
+        describe_result = subprocess.run(describe_cmd, capture_output=True, text=True)
+        
+        logger.info(f"Exit code: {describe_result.returncode}")
+        logger.info(f"Stdout length: {len(describe_result.stdout)}")
+        if describe_result.stderr:
+            logger.info(f"Stderr: {describe_result.stderr}")
+        
+        if describe_result.returncode == 0:
+            logger.info("SUCCESS: Got job description")
+            logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+            return {"logs": f"Could not find direct logs, but here's job information:\n{describe_result.stdout}"}
+        
+        # Try listing jobs
+        logger.info(f"ATTEMPT 7: Listing all jobs")
+        jobs_cmd = ["kubectl", "get", "jobs"]
+        logger.info(f"Running command: {' '.join(jobs_cmd)}")
+        jobs_result = subprocess.run(jobs_cmd, capture_output=True, text=True)
+        
+        logger.info(f"Exit code: {jobs_result.returncode}")
+        logger.info(f"Stdout: {jobs_result.stdout}")
+        if jobs_result.stderr:
+            logger.info(f"Stderr: {jobs_result.stderr}")
+        
+        # If we've tried everything and failed
+        logger.info("FAILED: All attempts to get logs have failed")
+        logger.info(f"========== LOG RETRIEVAL END FOR {job_id} ==========")
+        return {"logs": f"No logs found for job {job_id}. The job may not have started yet or may have been deleted."}
+            
     except Exception as e:
         logger.error(f"Error getting job logs: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting job logs: {str(e)}"
-        ) 
+        logger.error(traceback.format_exc())
+        return {"logs": f"Error retrieving logs: {str(e)}", "error": True} 

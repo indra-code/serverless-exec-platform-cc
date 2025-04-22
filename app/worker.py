@@ -89,10 +89,54 @@ def ensure_required_imports(file_path):
         logger.error(f"Error ensuring imports in file {file_path}: {str(e)}")
         return False
 
+def cancel_job(job_id):
+    """Cancel a running job in Kubernetes"""
+    try:
+        # Truncate job ID to 8 characters to match how it's created
+        short_job_id = job_id[:8] if len(job_id) > 8 else job_id
+        job_name = f"job-{short_job_id}"
+        
+        logger.info(f"Attempting to cancel job {job_name}")
+        
+        # Delete the job
+        cmd = ["kubectl", "delete", "job", job_name, "--force", "--grace-period=0"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            logger.info(f"Successfully cancelled job {job_name}")
+            
+            # Add job to failed jobs list
+            r.lpush('failed_jobs', json.dumps({
+                'job_id': job_id,
+                'error': "Job cancelled by user",
+                'timestamp': time.time()
+            }))
+            
+            return True
+        else:
+            logger.error(f"Failed to cancel job {job_name}: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error cancelling job {job_id}: {str(e)}")
+        return False
+
 logger.info("Worker started - waiting for jobs...")
 
 while True:
     try:
+        # Check for job cancellations first
+        cancel_data = r.rpop('cancel_jobs')
+        if cancel_data:
+            try:
+                cancel_info = json.loads(cancel_data)
+                job_id = cancel_info.get('job_id')
+                if job_id:
+                    logger.info(f"Received cancellation request for job {job_id}")
+                    cancel_job(job_id)
+            except json.JSONDecodeError:
+                logger.error(f"Invalid cancellation data: {cancel_data}")
+        
         # Try to get a job from the queue
         job_data = r.rpop('job_queue')
         if job_data:
@@ -113,15 +157,49 @@ while True:
                 logger.info(f"Host path: {code_path}")
                 logger.info(f"Minikube path: {minikube_code_path}")
                 
+                # Check if a specific runtime was requested
+                runtime = job.get('runtime', 'default')
+                logger.info(f"Requested runtime: {runtime}")
+                
+                # Extract additional parameters
+                memory = job.get('memory', 128)  # Default to 128Mi
+                timeout = job.get('timeout', 30)  # Default to 30 seconds
+                data = job.get('data', {})  # Additional data for the function
+                
                 # Create the Kubernetes job
                 try:
-                    create_k8s_job(job_id, minikube_code_path)
-                    logger.info(f"Job {job_id} created successfully")
+                    # Check if this is a gVisor job
+                    if runtime == "gvisor":
+                        from k8s_job_maker import create_gvisor_job
+                        # Use the specialized gVisor job creation function
+                        create_gvisor_job(
+                            job_id=job_id,
+                            code_path=minikube_code_path,
+                            memory=memory,
+                            timeout=timeout,
+                            data=data
+                        )
+                        logger.info(f"gVisor job {job_id} created successfully")
+                    else:
+                        # Use the standard job creation function
+                        from k8s_job_maker import create_k8s_job
+                        create_k8s_job(
+                            job_id=job_id, 
+                            code_path=minikube_code_path, 
+                            runtime=runtime,
+                            memory=memory,
+                            timeout=timeout,
+                            data=data
+                        )
+                        logger.info(f"Standard job {job_id} created successfully with runtime {runtime}")
                     
                     # Add job to completed jobs list
                     r.lpush('completed_jobs', json.dumps({
                         'job_id': job_id,
                         'status': 'submitted',
+                        'runtime': runtime,
+                        'memory': memory,
+                        'timeout': timeout,
                         'timestamp': time.time()
                     }))
                 except Exception as e:

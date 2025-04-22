@@ -12,3 +12,205 @@
 2025-04-21 23:17:13,470 - worker.k8s_job_maker - INFO - Waiting for job job-ae8124d1 to complete...
 2025-04-21 23:17:17,514 - worker.k8s_job_maker - INFO - Job job-ae8124d1 completed successfully
 2025-04-21 23:17:17,514 - worker - INFO - Job ae8124d1-f3c5-46e9-94eb-df5fc58141eb created successfully
+2025-04-22 07:53:37,028 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 07:54:21,059 - worker - INFO - Got job: 3d382c9f-5938-421f-84da-99094bbeb91c
+2025-04-22 07:54:21,059 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py: ['import os', 'import sys', 'import json']
+2025-04-22 07:54:21,060 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,060 - worker.k8s_job_maker - INFO - Creating job job-3d382c9f to run code at /hosthome/jayanth/serverless-exec-platform-cc/functions/function_3d382c9f-5938-421f-84da-99094bbeb91c.py
+2025-04-22 07:54:21,061 - worker.k8s_job_maker - INFO - Submitting job job-3d382c9f to Kubernetes
+2025-04-22 07:54:21,083 - worker.k8s_job_maker - INFO - Waiting for job job-3d382c9f to complete...
+2025-04-22 07:54:25,128 - worker.k8s_job_maker - INFO - Job job-3d382c9f completed successfully
+2025-04-22 07:54:25,128 - worker - INFO - Job 3d382c9f-5938-421f-84da-99094bbeb91c created successfully
+2025-04-22 08:17:27,564 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 08:17:40,572 - worker - INFO - Got job: 2a67b0f8-b9b1-4c70-8ec0-aab0b2780402
+2025-04-22 08:17:40,573 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py: ['import os', 'import sys', 'import json']
+2025-04-22 08:17:40,573 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,573 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,573 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,573 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,574 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,574 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,574 - worker.k8s_job_maker - INFO - Creating job job-2a67b0f8 to run code at /hosthome/jayanth/serverless-exec-platform-cc/functions/function_2a67b0f8-b9b1-4c70-8ec0-aab0b2780402.py
+2025-04-22 08:17:40,574 - worker.k8s_job_maker - INFO - Submitting job job-2a67b0f8 to Kubernetes
+2025-04-22 08:17:40,590 - worker.k8s_job_maker - INFO - Waiting for job job-2a67b0f8 to complete...
+2025-04-22 08:17:44,634 - worker.k8s_job_maker - INFO - Job job-2a67b0f8 completed successfully
+2025-04-22 08:17:44,634 - worker - INFO - Job 2a67b0f8-b9b1-4c70-8ec0-aab0b2780402 created successfully
+2025-04-22 09:27:47,376 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:34:02,339 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:38:49,934 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:38:57,940 - worker - INFO - Got job: eba3f7e3-84b1-4978-b543-25729b4fce97
+2025-04-22 09:38:57,941 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:38:57,941 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:38:57,941 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:38:57,941 - worker.k8s_job_maker - INFO - Creating job job-eba3f7e3 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:38:57,941 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_af968266-a650-4dae-ab73-2bd35d2d34de.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:38:57,942 - worker.k8s_job_maker - INFO - Submitting job job-eba3f7e3 to Kubernetes
+2025-04-22 09:38:57,948 - worker.k8s_job_maker - ERROR - Failed to create Kubernetes job: (422)
+Reason: Unprocessable Entity
+HTTP response headers: HTTPHeaderDict({'Audit-Id': 'ad586d36-5463-4584-85d3-05cdd5560e99', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': 'ae0e0552-98ba-49ee-bf93-2e7ddefdf47c', 'X-Kubernetes-Pf-Prioritylevel-Uid': 'c2cbaba9-aa2e-4dcb-9081-e94e3c12f7e2', 'Date': 'Tue, 22 Apr 2025 04:08:57 GMT', 'Content-Length': '1613'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"Job.batch \"job-eba3f7e3\" is invalid: [metadata.labels: Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?'), spec.template.labels: Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')]","reason":"Invalid","details":{"name":"job-eba3f7e3","group":"batch","kind":"Job","causes":[{"reason":"FieldValueInvalid","message":"Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')","field":"metadata.labels"},{"reason":"FieldValueInvalid","message":"Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')","field":"spec.template.labels"}]},"code":422}
+
+
+2025-04-22 09:38:57,948 - worker - ERROR - Error creating job eba3f7e3-84b1-4978-b543-25729b4fce97: (422)
+Reason: Unprocessable Entity
+HTTP response headers: HTTPHeaderDict({'Audit-Id': 'ad586d36-5463-4584-85d3-05cdd5560e99', 'Cache-Control': 'no-cache, private', 'Content-Type': 'application/json', 'X-Kubernetes-Pf-Flowschema-Uid': 'ae0e0552-98ba-49ee-bf93-2e7ddefdf47c', 'X-Kubernetes-Pf-Prioritylevel-Uid': 'c2cbaba9-aa2e-4dcb-9081-e94e3c12f7e2', 'Date': 'Tue, 22 Apr 2025 04:08:57 GMT', 'Content-Length': '1613'})
+HTTP response body: {"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"Job.batch \"job-eba3f7e3\" is invalid: [metadata.labels: Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?'), spec.template.labels: Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')]","reason":"Invalid","details":{"name":"job-eba3f7e3","group":"batch","kind":"Job","causes":[{"reason":"FieldValueInvalid","message":"Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')","field":"metadata.labels"},{"reason":"FieldValueInvalid","message":"Invalid value: \"cli+gvisor\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')","field":"spec.template.labels"}]},"code":422}
+
+
+2025-04-22 09:41:11,438 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:41:18,445 - worker - INFO - Got job: 7c211bc1-cdd8-4034-b509-0acc86358234
+2025-04-22 09:41:18,445 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:41:18,445 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:41:18,445 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:41:18,445 - worker.k8s_job_maker - INFO - Creating job job-7c211bc1 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_af968266-a650-4dae-ab73-2bd35d2d34de.py
+2025-04-22 09:41:18,445 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_af968266-a650-4dae-ab73-2bd35d2d34de.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:41:18,446 - worker.k8s_job_maker - INFO - Submitting job job-7c211bc1 to Kubernetes
+2025-04-22 09:41:18,457 - worker.k8s_job_maker - INFO - Waiting for job job-7c211bc1 to complete...
+2025-04-22 09:41:21,492 - worker.k8s_job_maker - INFO - Job job-7c211bc1 completed successfully
+2025-04-22 09:41:21,492 - worker - INFO - Standard job 7c211bc1-cdd8-4034-b509-0acc86358234 created successfully with runtime cli+gvisor
+2025-04-22 09:41:49,508 - worker - INFO - Got job: 4c7d67d3-224e-42f9-82e5-52b5d932f32c
+2025-04-22 09:41:49,508 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Creating job job-4c7d67d3 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:41:49,508 - worker.k8s_job_maker - INFO - Submitting job job-4c7d67d3 to Kubernetes
+2025-04-22 09:41:49,522 - worker.k8s_job_maker - INFO - Waiting for job job-4c7d67d3 to complete...
+2025-04-22 09:41:53,546 - worker.k8s_job_maker - INFO - Job job-4c7d67d3 completed successfully
+2025-04-22 09:41:53,546 - worker - INFO - Standard job 4c7d67d3-224e-42f9-82e5-52b5d932f32c created successfully with runtime cli+gvisor
+2025-04-22 09:45:02,862 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:47:08,917 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:47:15,920 - worker - INFO - Got job: b1e4c121-919a-49cd-94d4-1b29294b2fbc
+2025-04-22 09:47:15,921 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Creating job job-b1e4c121 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_b36fe6c8-aed5-4c8e-84cd-92bb0daa2e9b.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:47:15,921 - worker.k8s_job_maker - INFO - Submitting job job-b1e4c121 to Kubernetes
+2025-04-22 09:47:15,932 - worker.k8s_job_maker - INFO - Waiting for job job-b1e4c121 to complete...
+2025-04-22 09:47:19,966 - worker.k8s_job_maker - INFO - Job job-b1e4c121 completed successfully
+2025-04-22 09:47:19,966 - worker - INFO - Standard job b1e4c121-919a-49cd-94d4-1b29294b2fbc created successfully with runtime cli+gvisor
+2025-04-22 09:50:56,371 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:51:26,392 - worker - INFO - Got job: cf857cf2-faff-4200-92b1-673e19f8ae78
+2025-04-22 09:51:26,393 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py: ['import os', 'import sys', 'import json']
+2025-04-22 09:51:26,393 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,393 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,393 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,393 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,393 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,393 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:51:26,394 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,394 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:51:26,394 - worker.k8s_job_maker - INFO - Memory limit: 1024Mi, Timeout: 30s
+2025-04-22 09:51:26,394 - worker.k8s_job_maker - INFO - Creating job job-cf857cf2 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:51:26,394 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:51:26,395 - worker.k8s_job_maker - INFO - Submitting job job-cf857cf2 to Kubernetes
+2025-04-22 09:51:26,407 - worker.k8s_job_maker - INFO - Waiting for job job-cf857cf2 to complete...
+2025-04-22 09:51:30,438 - worker.k8s_job_maker - INFO - Job job-cf857cf2 completed successfully
+2025-04-22 09:51:30,439 - worker - INFO - Standard job cf857cf2-faff-4200-92b1-673e19f8ae78 created successfully with runtime cli+gvisor
+2025-04-22 09:52:17,392 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:52:22,396 - worker - INFO - Got job: a89b1298-974d-4b52-88bf-d01964cdf3f2
+2025-04-22 09:52:22,396 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,396 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,396 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,396 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,396 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:52:22,396 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,396 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:52:22,397 - worker.k8s_job_maker - INFO - Memory limit: 1024Mi, Timeout: 30s
+2025-04-22 09:52:22,397 - worker.k8s_job_maker - INFO - Creating job job-a89b1298 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py
+2025-04-22 09:52:22,397 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_88a10bc7-2cf3-426e-b542-d5cb49cf4bdc.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:52:22,397 - worker.k8s_job_maker - INFO - Submitting job job-a89b1298 to Kubernetes
+2025-04-22 09:52:22,415 - worker.k8s_job_maker - INFO - Waiting for job job-a89b1298 to complete...
+2025-04-22 09:52:26,449 - worker.k8s_job_maker - INFO - Job job-a89b1298 completed successfully
+2025-04-22 09:52:26,450 - worker - INFO - Standard job a89b1298-974d-4b52-88bf-d01964cdf3f2 created successfully with runtime cli+gvisor
+2025-04-22 09:52:32,453 - worker - INFO - Got job: 0ef94ec7-89bf-4988-b19d-2d5f3f8a8567
+2025-04-22 09:52:32,454 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py: ['import os', 'import sys', 'import json']
+2025-04-22 09:52:32,454 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:52:32,454 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:52:32,454 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:52:32,454 - worker.k8s_job_maker - INFO - Creating job job-0ef94ec7 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:52:32,454 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:52:32,455 - worker.k8s_job_maker - INFO - Submitting job job-0ef94ec7 to Kubernetes
+2025-04-22 09:52:32,460 - worker.k8s_job_maker - INFO - Waiting for job job-0ef94ec7 to complete...
+2025-04-22 09:52:36,487 - worker.k8s_job_maker - INFO - Job job-0ef94ec7 completed successfully
+2025-04-22 09:52:36,487 - worker - INFO - Standard job 0ef94ec7-89bf-4988-b19d-2d5f3f8a8567 created successfully with runtime cli+gvisor
+2025-04-22 09:54:41,564 - worker - INFO - Got job: 04f84b17-3990-4c84-9207-fd1489ff58cd
+2025-04-22 09:54:41,564 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,564 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,564 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,565 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,565 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Creating job job-04f84b17 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_5fc4c54e-16fa-4b0d-8fe5-dbf623eff15b.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:54:41,565 - worker.k8s_job_maker - INFO - Submitting job job-04f84b17 to Kubernetes
+2025-04-22 09:54:41,586 - worker.k8s_job_maker - INFO - Waiting for job job-04f84b17 to complete...
+2025-04-22 09:54:44,620 - worker.k8s_job_maker - INFO - Job job-04f84b17 completed successfully
+2025-04-22 09:54:44,621 - worker - INFO - Standard job 04f84b17-3990-4c84-9207-fd1489ff58cd created successfully with runtime cli+gvisor
+2025-04-22 09:54:46,623 - worker - INFO - Got job: bd8582b1-7332-40ad-b35f-c00068143a70
+2025-04-22 09:54:46,623 - worker - INFO - Adding missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py: ['import os', 'import sys', 'import json']
+2025-04-22 09:54:46,624 - worker - INFO - Added missing imports to /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Creating job job-bd8582b1 to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_52607da4-cd30-4800-a6f2-7545574d3b09.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:54:46,624 - worker.k8s_job_maker - INFO - Submitting job job-bd8582b1 to Kubernetes
+2025-04-22 09:54:46,635 - worker.k8s_job_maker - INFO - Waiting for job job-bd8582b1 to complete...
+2025-04-22 09:54:49,655 - worker.k8s_job_maker - INFO - Job job-bd8582b1 completed successfully
+2025-04-22 09:54:49,655 - worker - INFO - Standard job bd8582b1-7332-40ad-b35f-c00068143a70 created successfully with runtime cli+gvisor
+2025-04-22 09:57:14,747 - worker - INFO - Worker started - waiting for jobs...
+2025-04-22 09:57:22,754 - worker - INFO - Got job: 4ab38e5e-4e0b-4d4e-99dc-b3d0db7b957c
+2025-04-22 09:57:22,755 - worker - INFO - Original path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker - INFO - Mapped path to Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker - INFO - Host path: /home/jayanth/Documents/cc/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker - INFO - Minikube path: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker - INFO - Requested runtime: cli+gvisor
+2025-04-22 09:57:22,755 - worker.k8s_job_maker - INFO - Using code path in Minikube: /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker.k8s_job_maker - INFO - Using runtime: cli+gvisor
+2025-04-22 09:57:22,755 - worker.k8s_job_maker - INFO - Memory limit: 128Mi, Timeout: 30s
+2025-04-22 09:57:22,755 - worker.k8s_job_maker - INFO - Creating job job-4ab38e5e to run code at /hosthome/jayanth/serverless-exec-platform-cc/frontend/functions/function_52607da4-cd30-4800-a6f2-7545574d3b09.py
+2025-04-22 09:57:22,755 - worker.k8s_job_maker - INFO - Added data parameters to command: ['python', '/app/code/function_52607da4-cd30-4800-a6f2-7545574d3b09.py', '--args', '[]', '--kwargs', '{}']
+2025-04-22 09:57:22,756 - worker.k8s_job_maker - INFO - Submitting job job-4ab38e5e to Kubernetes
+2025-04-22 09:57:22,776 - worker.k8s_job_maker - INFO - Waiting for job job-4ab38e5e to complete...
+2025-04-22 09:57:26,810 - worker.k8s_job_maker - INFO - Job job-4ab38e5e completed successfully
+2025-04-22 09:57:26,811 - worker - INFO - Standard job 4ab38e5e-4e0b-4d4e-99dc-b3d0db7b957c created successfully with runtime cli+gvisor

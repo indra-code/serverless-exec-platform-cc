@@ -122,8 +122,8 @@ if page == "Function Management":
                             with col1:
                                 runtime = st.selectbox(
                                     "Runtime",
-                                    options=["cli", "docker", "gvisor"],  # CLI first as default
-                                    index=0,  # Default to CLI
+                                    options=["cli+gvisor", "docker", "gvisor"],  # Updated CLI option name
+                                    index=0,  # Default to CLI+gVisor
                                     key=f"runtime_{func['id']}"
                                 )
                             
@@ -167,8 +167,8 @@ if page == "Function Management":
                             col1, col2 = st.columns(2)
                             with col1:
                                 if st.button("Update", key=f"update_{func['id']}"):
-                                    # TODO: Implement update functionality
-                                    pass
+                                    # Show update form
+                                    st.session_state[f"show_update_form_{func['id']}"] = True
                             with col2:
                                 if st.button("Delete", key=f"delete_{func['id']}"):
                                     try:
@@ -184,6 +184,59 @@ if page == "Function Management":
                                             st.error(f"Error deleting function: {delete_response.text}")
                                     except Exception as e:
                                         st.error(f"Error deleting function: {str(e)}")
+                            
+                            # Update form
+                            if f"show_update_form_{func['id']}" in st.session_state and st.session_state[f"show_update_form_{func['id']}"]:
+                                st.subheader("Update Function")
+                                with st.form(key=f"update_form_{func['id']}"):
+                                    new_name = st.text_input("New Function Name", value=func['name'])
+                                    
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        new_timeout = st.selectbox(
+                                            "Timeout (seconds)",
+                                            options=[10, 30, 60, 120, 300],
+                                            index=[10, 30, 60, 120, 300].index(func['timeout']) if func['timeout'] in [10, 30, 60, 120, 300] else 1
+                                        )
+                                    with col2:
+                                        new_memory = st.selectbox(
+                                            "Memory (MB)",
+                                            options=[128, 256, 512, 1024],
+                                            index=[128, 256, 512, 1024].index(func['memory']) if func['memory'] in [128, 256, 512, 1024] else 0
+                                        )
+                                    
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        submit = st.form_submit_button("Save Changes")
+                                    with col2:
+                                        if st.form_submit_button("Cancel"):
+                                            del st.session_state[f"show_update_form_{func['id']}"]
+                                            st.rerun()
+                                    
+                                    if submit:
+                                        try:
+                                            # Prepare the update data
+                                            update_data = {
+                                                "name": new_name,
+                                                "timeout": new_timeout,
+                                                "memory": new_memory
+                                            }
+                                            
+                                            # Send the update request
+                                            update_response = requests.put(
+                                                f"{API_BASE_URL}/functions/{func['id']}",
+                                                json=update_data
+                                            )
+                                            
+                                            if update_response.status_code == 200:
+                                                st.success("Function updated successfully!")
+                                                # Clear the form display flag
+                                                del st.session_state[f"show_update_form_{func['id']}"]
+                                                st.rerun()
+                                            else:
+                                                st.error(f"Error updating function: {update_response.text}")
+                                        except Exception as e:
+                                            st.error(f"Error updating function: {str(e)}")
                 else:
                     st.info("No functions found. Create one above!")
             else:
@@ -235,34 +288,6 @@ elif page == "Monitoring Dashboard":
                 st.metric("Success Rate", f"{success_rate:.1f}%")
             with col4:
                 st.metric("Avg Execution Time", f"{metrics.get('avg_execution_time', 0):.2f}s")
-            
-            # Time series data
-            st.subheader("Execution Trends")
-            time_series_data = metrics.get('time_series', [])
-            if time_series_data and len(time_series_data) > 0:
-                try:
-                    # Convert to dataframe for plotting
-                    df_time_series = pd.DataFrame(time_series_data)
-                    if not df_time_series.empty and 'date' in df_time_series.columns and 'executions' in df_time_series.columns:
-                        df_time_series['date'] = pd.to_datetime(df_time_series['date'])
-                        
-                        # Plot time series
-                        fig = px.line(
-                            df_time_series, 
-                            x='date', 
-                            y='executions',
-                            labels={'date': 'Date', 'executions': 'Number of Executions'},
-                            title=f"Function Executions over the Last {time_period} Days"
-                        )
-                        fig.update_layout(xaxis_tickangle=-45)
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.info("Time series data format is incomplete.")
-                except Exception as e:
-                    st.warning(f"Error displaying time series chart: {str(e)}")
-                    st.info("Time series data is available but couldn't be displayed properly.")
-            else:
-                st.info("No time series data available yet.")
             
             # Function performance
             st.subheader("Function Performance")

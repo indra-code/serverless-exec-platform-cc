@@ -3,6 +3,9 @@ import docker
 import time
 import logging
 import os
+import json
+import redis
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 import threading
@@ -80,6 +83,8 @@ class ExecutionEngine:
         self.executor = ThreadPoolExecutor(max_workers=10)
         self.warmup_thread = threading.Thread(target=self._warmup_worker, daemon=True)
         self.warmup_thread.start()
+        self.logger = logging.getLogger(__name__)
+        self.r = redis.Redis(host='localhost', port=6379, db=0)
     
     def _warmup_worker(self):
         while True:
@@ -97,47 +102,46 @@ class ExecutionEngine:
         self.warmup_queue.put(function)
     
     async def execute_function(self, function: Function, request: FunctionExecutionRequest):
+        """
+        Execute function by submitting to the Redis job queue for the worker to process.
+        This replaces direct container execution with a queue-based approach.
+        """
+        job_id = str(uuid.uuid4())
+        self.logger.info(f"Submitting function {function.id} to job queue with job ID {job_id}")
+        
         try:
-            # Try to get a container from the pool
-            container = self.container_pool.get_container(str(function.id))
+            # Create job data for the queue
+            job_data = {
+                "job_id": job_id,
+                "code_path": function.code_path,
+                "runtime": "docker",  # Use Docker runtime for this engine
+                "memory": function.memory,
+                "timeout": function.timeout,
+                "data": request.data if hasattr(request, 'data') else {}
+            }
             
-            # If no container available, create a new one
-            if not container:
-                container = self.container_pool.create_container(function)
+            # Submit to Redis queue
+            self.r.lpush('job_queue', json.dumps(job_data))
             
-            try:
-                # Execute the function
-                result = container.exec_run(
-                    cmd=["python", "/app/code/handler.py"],
-                    environment={
-                        "REQUEST_DATA": request.json()
-                    }
-                )
-                
-                # Check for errors
-                if result.exit_code != 0:
-                    raise Exception(f"Function execution failed: {result.output.decode()}")
-                
-                # Return container to pool
-                self.container_pool.return_container(str(function.id), container)
-                
-                return {
-                    "status": "success",
-                    "output": result.output.decode(),
-                    "exit_code": result.exit_code
-                }
-                
-            except Exception as e:
-                # If there's an error, remove the container and create a new one
-                container.stop()
-                container.remove()
-                raise e
+            self.logger.info(f"Function {function.id} submitted to job queue successfully as job {job_id}")
+            
+            # Return immediately with job ID for async tracking
+            return {
+                "status": "success",
+                "job_id": job_id,
+                "message": "Function submitted to queue for execution",
+                "gvisor_verified": False,  # Docker engine doesn't use gVisor
+                "execution_method": "docker"
+            }
                 
         except Exception as e:
-            logger.error(f"Error executing function {function.id}: {str(e)}")
+            self.logger.error(f"Error submitting function to job queue: {str(e)}")
             return {
                 "status": "error",
-                "error": str(e)
+                "job_id": job_id,
+                "error": str(e),
+                "gvisor_verified": False,
+                "execution_method": "docker"
             }
 
     def execute_function_from_code(self, function_id: str, code: str, runtime: str) -> dict:

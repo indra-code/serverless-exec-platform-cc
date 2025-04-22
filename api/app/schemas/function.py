@@ -19,6 +19,8 @@ class FunctionUpdate(FunctionBase):
     name: Optional[str] = None
     code_path: Optional[str] = None
     worker_pod: Optional[str] = None
+    memory: Optional[int] = None
+    timeout: Optional[int] = None
 
 class FunctionInDB(FunctionBase):
     id: int

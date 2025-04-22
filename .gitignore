@@ -40,6 +40,9 @@ functions/
 uploads/
 function_docker/temp/
 function_job_*.log
+*function*.log
+frontendfunctions/
+function_logs/
 
 # OS specific
 .DS_Store
